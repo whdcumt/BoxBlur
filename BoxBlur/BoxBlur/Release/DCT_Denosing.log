@@ -1,0 +1,39 @@
+﻿生成启动时间为 2015/11/18 17:04:31。
+     1>项目“C:\Users\pengw\Desktop\ShcokFilter\ShcokFilter\DCT_Denosing\DCT_Denosing.vcxproj”在节点 2 上(build 个目标)。
+     1>C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\Microsoft.CppBuild.targets(299,5): warning MSB8004: Output 目录未以斜杠结尾。此生成实例将添加斜杠，因为必须有这个斜杠才能正确计算 Output 目录。
+     1>InitializeBuildStatus:
+         正在创建“Release\DCT_Denosing.unsuccessfulbuild”，因为已指定“AlwaysCreate”。
+       ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /Zi /nologo /W3 /WX- /O2 /Oi /Ot /Oy- /GL /D WIN32 /D NDEBUG /D _WINDOWS /D _USRDLL /D HAZEREMOVAL_EXPORTS /D _WINDLL /D _UNICODE /D UNICODE /Gm- /EHsc /MD /GS /Gy /arch:SSE2 /fp:fast /Zc:wchar_t /Zc:forScope /openmp /Fo"Release\\" /Fd"Release\vc100.pdb" /Gz /analyze- /errorReport:prompt DCT_Denosing.cpp
+         DCT_Denosing.cpp
+     1>DCT_Denosing.cpp(160): warning C4244: “=”: 从“int”转换到“float”，可能丢失数据
+     1>DCT_Denosing.cpp(161): warning C4244: “=”: 从“int”转换到“float”，可能丢失数据
+     1>DCT_Denosing.cpp(162): warning C4244: “=”: 从“int”转换到“float”，可能丢失数据
+     1>DCT_Denosing.cpp(176): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+     1>DCT_Denosing.cpp(177): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+     1>DCT_Denosing.cpp(249): warning C4244: “=”: 从“int”转换到“float”，可能丢失数据
+     1>DCT_Denosing.cpp(249): warning C4244: “=”: 从“int”转换到“float”，可能丢失数据
+     1>DCT_Denosing.cpp(249): warning C4244: “=”: 从“int”转换到“float”，可能丢失数据
+     1>DCT_Denosing.cpp(200): warning C4101: “Lambda”: 未引用的局部变量
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"..\Sample\bin\Release\DCT_Denosing.dll" /INCREMENTAL:NO /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /DEF:"DCT_Denosing.def" /MANIFEST /ManifestFile:"Release\DCT_Denosing.dll.intermediate.manifest" /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /DEBUG /PDB:"C:\Users\pengw\Desktop\ShcokFilter\ShcokFilter\Sample\bin\Release\DCT_Denosing.pdb" /SUBSYSTEM:WINDOWS /OPT:REF /OPT:ICF /LTCG /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"..\Sample\bin\Release\DCT_Denosing.lib" /MACHINE:X86 /DLL Release\BoxBlur.obj
+         Release\Core.obj
+         Release\DCT_Denosing.obj
+         Release\DecolorizationWithContrastPreserved.obj
+         Release\MaxValue.obj
+         Release\MinValue.obj
+         Release\Utility.obj
+            正在创建库 ..\Sample\bin\Release\DCT_Denosing.lib 和对象 ..\Sample\bin\Release\DCT_Denosing.exp
+         正在生成代码
+         已完成代码的生成
+         DCT_Denosing.vcxproj -> C:\Users\pengw\Desktop\ShcokFilter\ShcokFilter\DCT_Denosing\..\Sample\bin\Release\DCT_Denosing.dll
+       Manifest:
+         C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\bin\mt.exe /nologo /verbose /outputresource:"..\Sample\bin\Release\DCT_Denosing.dll;#2" /manifest Release\DCT_Denosing.dll.intermediate.manifest
+       FinalizeBuildStatus:
+         正在删除文件“Release\DCT_Denosing.unsuccessfulbuild”。
+         正在对“Release\DCT_Denosing.lastbuildstate”执行 Touch 任务。
+     1>已完成生成项目“C:\Users\pengw\Desktop\ShcokFilter\ShcokFilter\DCT_Denosing\DCT_Denosing.vcxproj”(build 个目标)的操作。
+
+生成成功。
+
+已用时间 00:00:00.70

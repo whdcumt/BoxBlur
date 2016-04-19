@@ -1,0 +1,760 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!-- saved from url=(0047)http://www.cnblogs.com/Imageshop/p/5053013.html -->
+<html xmlns="http://www.w3.org/1999/xhtml" lang="zh-cn"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园</title>
+<link type="text/css" rel="stylesheet" href="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/blog-common.css">
+<link id="MainCss" type="text/css" rel="stylesheet" href="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/bundle-clover.css">
+<link title="RSS" type="application/rss+xml" rel="alternate" href="http://www.cnblogs.com/Imageshop/rss">
+<link title="RSD" type="application/rsd+xml" rel="EditURI" href="http://www.cnblogs.com/Imageshop/rsd.xml">
+<link type="application/wlwmanifest+xml" rel="wlwmanifest" href="http://www.cnblogs.com/Imageshop/wlwmanifest.xml">
+<script type="text/javascript" src="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/encoder.js"></script><script src="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/jquery.js" type="text/javascript"></script>  
+<script type="text/javascript">var currentBlogApp = 'Imageshop', cb_enable_mathjax=true;</script>
+<script src="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/blog-common.js" type="text/javascript"></script>
+<script type="text/x-mathjax-config;executed=true">MathJax.Hub.Config({
+  tex2jax: { inlineMath: [['$','$'], ['\\(','\\)']] },
+  TeX: { equationNumbers: { autoNumber: ['AMS'], useLabelIds: true } },
+  'HTML-CSS': { linebreaks: { automatic: true } },
+  SVG: { linebreaks: { automatic: true } }});</script><script type="text/javascript" src="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/MathJax.js"></script><style type="text/css">.MathJax_Hover_Frame {border-radius: .25em; -webkit-border-radius: .25em; -moz-border-radius: .25em; -khtml-border-radius: .25em; box-shadow: 0px 0px 15px #83A; -webkit-box-shadow: 0px 0px 15px #83A; -moz-box-shadow: 0px 0px 15px #83A; -khtml-box-shadow: 0px 0px 15px #83A; border: 1px solid #A6D ! important; display: inline-block; position: absolute}
+.MathJax_Menu_Button .MathJax_Hover_Arrow {position: absolute; cursor: pointer; display: inline-block; border: 2px solid #AAA; border-radius: 4px; -webkit-border-radius: 4px; -moz-border-radius: 4px; -khtml-border-radius: 4px; font-family: 'Courier New',Courier; font-size: 9px; color: #F0F0F0}
+.MathJax_Menu_Button .MathJax_Hover_Arrow span {display: block; background-color: #AAA; border: 1px solid; border-radius: 3px; line-height: 0; padding: 4px}
+.MathJax_Hover_Arrow:hover {color: white!important; border: 2px solid #CCC!important}
+.MathJax_Hover_Arrow:hover span {background-color: #CCC!important}
+</style><style type="text/css">#MathJax_About {position: fixed; left: 50%; width: auto; text-align: center; border: 3px outset; padding: 1em 2em; background-color: #DDDDDD; color: black; cursor: default; font-family: message-box; font-size: 120%; font-style: normal; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; z-index: 201; border-radius: 15px; -webkit-border-radius: 15px; -moz-border-radius: 15px; -khtml-border-radius: 15px; box-shadow: 0px 10px 20px #808080; -webkit-box-shadow: 0px 10px 20px #808080; -moz-box-shadow: 0px 10px 20px #808080; -khtml-box-shadow: 0px 10px 20px #808080; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+#MathJax_About.MathJax_MousePost {outline: none}
+.MathJax_Menu {position: absolute; background-color: white; color: black; width: auto; padding: 2px; border: 1px solid #CCCCCC; margin: 0; cursor: default; font: menu; text-align: left; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; z-index: 201; box-shadow: 0px 10px 20px #808080; -webkit-box-shadow: 0px 10px 20px #808080; -moz-box-shadow: 0px 10px 20px #808080; -khtml-box-shadow: 0px 10px 20px #808080; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+.MathJax_MenuItem {padding: 2px 2em; background: transparent}
+.MathJax_MenuArrow {position: absolute; right: .5em; padding-top: .25em; color: #666666; font-size: .75em}
+.MathJax_MenuActive .MathJax_MenuArrow {color: white}
+.MathJax_MenuArrow.RTL {left: .5em; right: auto}
+.MathJax_MenuCheck {position: absolute; left: .7em}
+.MathJax_MenuCheck.RTL {right: .7em; left: auto}
+.MathJax_MenuRadioCheck {position: absolute; left: 1em}
+.MathJax_MenuRadioCheck.RTL {right: 1em; left: auto}
+.MathJax_MenuLabel {padding: 2px 2em 4px 1.33em; font-style: italic}
+.MathJax_MenuRule {border-top: 1px solid #CCCCCC; margin: 4px 1px 0px}
+.MathJax_MenuDisabled {color: GrayText}
+.MathJax_MenuActive {background-color: Highlight; color: HighlightText}
+.MathJax_MenuDisabled:focus, .MathJax_MenuLabel:focus {background-color: #E8E8E8}
+.MathJax_ContextMenu:focus {outline: none}
+.MathJax_ContextMenu .MathJax_MenuItem:focus {outline: none}
+#MathJax_AboutClose {top: .2em; right: .2em}
+.MathJax_Menu .MathJax_MenuClose {top: -10px; left: -10px}
+.MathJax_MenuClose {position: absolute; cursor: pointer; display: inline-block; border: 2px solid #AAA; border-radius: 18px; -webkit-border-radius: 18px; -moz-border-radius: 18px; -khtml-border-radius: 18px; font-family: 'Courier New',Courier; font-size: 24px; color: #F0F0F0}
+.MathJax_MenuClose span {display: block; background-color: #AAA; border: 1.5px solid; border-radius: 18px; -webkit-border-radius: 18px; -moz-border-radius: 18px; -khtml-border-radius: 18px; line-height: 0; padding: 8px 0 6px}
+.MathJax_MenuClose:hover {color: white!important; border: 2px solid #CCC!important}
+.MathJax_MenuClose:hover span {background-color: #CCC!important}
+.MathJax_MenuClose:hover:focus {outline: none}
+</style><style type="text/css">.MathJax_Preview .MJXf-math {color: inherit!important}
+</style><style type="text/css">.MJX_Assistive_MathML {position: absolute!important; top: 0; left: 0; clip: rect(1px, 1px, 1px, 1px); padding: 1px 0 0 0!important; border: 0!important; height: 1px!important; width: 1px!important; overflow: hidden!important; display: block!important; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none}
+.MJX_Assistive_MathML.MJX_Assistive_MathML_Block {width: 100%!important}
+</style><style type="text/css">#MathJax_Zoom {position: absolute; background-color: #F0F0F0; overflow: auto; display: block; z-index: 301; padding: .5em; border: 1px solid black; margin: 0; font-weight: normal; font-style: normal; text-align: left; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; -webkit-box-sizing: content-box; -moz-box-sizing: content-box; box-sizing: content-box; box-shadow: 5px 5px 15px #AAAAAA; -webkit-box-shadow: 5px 5px 15px #AAAAAA; -moz-box-shadow: 5px 5px 15px #AAAAAA; -khtml-box-shadow: 5px 5px 15px #AAAAAA; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+#MathJax_ZoomOverlay {position: absolute; left: 0; top: 0; z-index: 300; display: inline-block; width: 100%; height: 100%; border: 0; padding: 0; margin: 0; background-color: white; opacity: 0; filter: alpha(opacity=0)}
+#MathJax_ZoomFrame {position: relative; display: inline-block; height: 0; width: 0}
+#MathJax_ZoomEventTrap {position: absolute; left: 0; top: 0; z-index: 302; display: inline-block; border: 0; padding: 0; margin: 0; background-color: white; opacity: 0; filter: alpha(opacity=0)}
+</style><style type="text/css">.MathJax_Preview {color: #888}
+#MathJax_Message {position: fixed; left: 1em; bottom: 1.5em; background-color: #E6E6E6; border: 1px solid #959595; margin: 0px; padding: 2px 8px; z-index: 102; color: black; font-size: 80%; width: auto; white-space: nowrap}
+#MathJax_MSIE_Frame {position: absolute; top: 0; left: 0; width: 0px; z-index: 101; border: 0px; margin: 0px; padding: 0px}
+.MathJax_Error {color: #CC0000; font-style: italic}
+</style><style type="text/css">.MJXp-script {font-size: .8em}
+.MJXp-right {-webkit-transform-origin: right; -moz-transform-origin: right; -ms-transform-origin: right; -o-transform-origin: right; transform-origin: right}
+.MJXp-bold {font-weight: bold}
+.MJXp-italic {font-style: italic}
+.MJXp-scr {font-family: MathJax_Script,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-frak {font-family: MathJax_Fraktur,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-sf {font-family: MathJax_SansSerif,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-cal {font-family: MathJax_Caligraphic,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-mono {font-family: MathJax_Typewriter,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-largeop {font-size: 150%}
+.MJXp-largeop.MJXp-int {vertical-align: -.2em}
+.MJXp-math {display: inline-block; line-height: 1.2; text-indent: 0; font-family: 'Times New Roman',Times,STIXGeneral,serif; white-space: nowrap; border-collapse: collapse}
+.MJXp-display {display: block; text-align: center; margin: 1em 0}
+.MJXp-math span {display: inline-block}
+.MJXp-box {display: block!important; text-align: center}
+.MJXp-box:after {content: " "}
+.MJXp-rule {display: block!important; margin-top: .1em}
+.MJXp-char {display: block!important}
+.MJXp-mo {margin: 0 .15em}
+.MJXp-mfrac {margin: 0 .125em; vertical-align: .25em}
+.MJXp-denom {display: inline-table!important; width: 100%}
+.MJXp-denom > * {display: table-row!important}
+.MJXp-surd {vertical-align: top}
+.MJXp-surd > * {display: block!important}
+.MJXp-script-box > *  {display: table!important; height: 50%}
+.MJXp-script-box > * > * {display: table-cell!important; vertical-align: top}
+.MJXp-script-box > *:last-child > * {vertical-align: bottom}
+.MJXp-script-box > * > * > * {display: block!important}
+.MJXp-mphantom {visibility: hidden}
+.MJXp-munderover {display: inline-table!important}
+.MJXp-over {display: inline-block!important; text-align: center}
+.MJXp-over > * {display: block!important}
+.MJXp-munderover > * {display: table-row!important}
+.MJXp-mtable {vertical-align: .25em; margin: 0 .125em}
+.MJXp-mtable > * {display: inline-table!important; vertical-align: middle}
+.MJXp-mtr {display: table-row!important}
+.MJXp-mtd {display: table-cell!important; text-align: center; padding: .5em 0 0 .5em}
+.MJXp-mtr > .MJXp-mtd:first-child {padding-left: 0}
+.MJXp-mtr:first-child > .MJXp-mtd {padding-top: 0}
+.MJXp-mlabeledtr {display: table-row!important}
+.MJXp-mlabeledtr > .MJXp-mtd:first-child {padding-left: 0}
+.MJXp-mlabeledtr:first-child > .MJXp-mtd {padding-top: 0}
+.MJXp-merror {background-color: #FFFF88; color: #CC0000; border: 1px solid #CC0000; padding: 1px 3px; font-style: normal; font-size: 90%}
+.MJXp-scale0 {-webkit-transform: scaleX(.0); -moz-transform: scaleX(.0); -ms-transform: scaleX(.0); -o-transform: scaleX(.0); transform: scaleX(.0)}
+.MJXp-scale1 {-webkit-transform: scaleX(.1); -moz-transform: scaleX(.1); -ms-transform: scaleX(.1); -o-transform: scaleX(.1); transform: scaleX(.1)}
+.MJXp-scale2 {-webkit-transform: scaleX(.2); -moz-transform: scaleX(.2); -ms-transform: scaleX(.2); -o-transform: scaleX(.2); transform: scaleX(.2)}
+.MJXp-scale3 {-webkit-transform: scaleX(.3); -moz-transform: scaleX(.3); -ms-transform: scaleX(.3); -o-transform: scaleX(.3); transform: scaleX(.3)}
+.MJXp-scale4 {-webkit-transform: scaleX(.4); -moz-transform: scaleX(.4); -ms-transform: scaleX(.4); -o-transform: scaleX(.4); transform: scaleX(.4)}
+.MJXp-scale5 {-webkit-transform: scaleX(.5); -moz-transform: scaleX(.5); -ms-transform: scaleX(.5); -o-transform: scaleX(.5); transform: scaleX(.5)}
+.MJXp-scale6 {-webkit-transform: scaleX(.6); -moz-transform: scaleX(.6); -ms-transform: scaleX(.6); -o-transform: scaleX(.6); transform: scaleX(.6)}
+.MJXp-scale7 {-webkit-transform: scaleX(.7); -moz-transform: scaleX(.7); -ms-transform: scaleX(.7); -o-transform: scaleX(.7); transform: scaleX(.7)}
+.MJXp-scale8 {-webkit-transform: scaleX(.8); -moz-transform: scaleX(.8); -ms-transform: scaleX(.8); -o-transform: scaleX(.8); transform: scaleX(.8)}
+.MJXp-scale9 {-webkit-transform: scaleX(.9); -moz-transform: scaleX(.9); -ms-transform: scaleX(.9); -o-transform: scaleX(.9); transform: scaleX(.9)}
+.MathJax_PHTML .noError {vertical-align: ; font-size: 90%; text-align: left; color: black; padding: 1px 3px; border: 1px solid}
+</style></head>
+<body><div id="MathJax_Message" style="display: none;"></div>
+<a name="top"></a>
+
+<!--done-->
+<table cellpadding="0" cellspacing="0" border="0" align="center" width="100%">
+<tbody><tr>
+	<td width="299" background="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/banner1.jpg"></td>
+	<td background="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/banner.jpg">
+<!--done-->
+<div class="header">
+	<div class="headerText">
+		<a id="Header1_HeaderTitle" class="headermaintitle" href="http://www.cnblogs.com/Imageshop/">只(挚)爱图像处理</a><br>
+		一心无二用，本人只专注于基础图像算法的实现与优化，如图像增强、滤镜、分割、解码编码等，无心恋及图像识别。
+	</div>
+</div>
+</td>
+	<td width="296" background="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/banner2.jpg"></td>
+</tr>
+</tbody></table>
+<div id="mylinks"><a id="MyLinks1_HomeLink" class="menu" href="http://www.cnblogs.com/">博客园</a>&nbsp; &nbsp;
+<a id="MyLinks1_MyHomeLink" class="menu" href="http://www.cnblogs.com/Imageshop/">首页</a>&nbsp; &nbsp;
+<a href="http://q.cnblogs.com/" class="menu" target="_blank">博问</a>&nbsp; &nbsp;
+<a href="http://home.cnblogs.com/ing/" class="menu" target="_blank">闪存</a>&nbsp; &nbsp;
+<a id="MyLinks1_NewPostLink" class="menu" rel="nofollow" href="http://i.cnblogs.com/EditPosts.aspx?opt=1">新随笔</a>&nbsp; &nbsp;
+
+&nbsp; &nbsp;
+<a id="MyLinks1_Admin" class="menu" rel="nofollow" href="http://i.cnblogs.com/">管理</a>
+<!-- <a id="MyLinks1_ContactLink" accesskey="9" class="menu" rel="nofollow" href="http://msg.cnblogs.com/send/Imageshop">联系</a>&nbsp;&nbsp;&nbsp; -->
+</div>
+<div id="mytopmenu">
+	
+		<div id="mystats">
+			
+<!--done-->
+<div class="blogStats">
+posts - 79,&nbsp;
+comments - 576,&nbsp;
+trackbacks - 0
+
+</div></div>
+	
+</div>
+<div id="centercontent">
+	
+<div id="post_detail">
+<!--done-->
+<div class="post">
+	<div class="postTitle">
+		<a id="cb_post_title_url" class="postTitle2" href="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园.html">解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。</a>
+	</div>
+	<div id="cnblogs_post_body"><p>&nbsp; &nbsp; &nbsp; 说明：本文所有算法的涉及到的优化均指在PC上进行的，对于其他构架是否合适未知，请自行试验。</p>
+<p>&nbsp; &nbsp; &nbsp; Box Filter，最经典的一种领域操作，在无数的场合中都有着广泛的应用，作为一个很基础的函数，其性能的好坏也直接影响着其他相关函数的性能，最典型莫如现在很好的EPF滤波器：GuideFilter。因此其优化的档次和程度是非常重要的，网络上有很多相关的代码和博客对该算法进行讲解和优化，提出了不少O(1)算法，但所谓的0(1)算法也有优劣之分，0(1)只是表示执行时间和某个参数无关，但本身的耗时还是有区别。比较流行的就是累积直方图法，其实这个是非常不可取的，因为稍大的图就会导致溢出，这里我们解析下 opencv的相关代码，看看他是如何进行优化的。</p>
+<p>&nbsp; &nbsp; &nbsp; 首先找到opencv的代码的位置，其在\opencv\sources\modules\imgproc\src\smooth.cpp中。</p>
+<p>&nbsp; &nbsp; &nbsp; Box Filter 是一种行列可分离的滤波，因此，opencv也是这样处理的，先进行行方向的滤波，得到中间结果，然后再对中间结果进行列方向的处理，得到最终的结果。</p>
+<p>&nbsp; &nbsp; &nbsp;opencv 行方向处理的相关代码如下：</p>
+<div class="cnblogs_code"><div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/copycode.gif" alt="复制代码"></a></span></div>
+<pre>template&lt;typename T, typename ST&gt;
+struct<span> RowSum :
+        public<span> BaseRowFilter
+{
+    RowSum( int _ksize, int<span> _anchor ) :
+        BaseRowFilter()
+    {
+        ksize =<span> _ksize;
+        anchor =<span> _anchor;
+    }
+
+    virtual void operator()(const uchar* src, uchar* dst, int width, int<span> cn)
+    {
+        const T* S = (const T*<span>)src;
+        ST* D = (ST*<span>)dst;
+        int i = 0, k, ksz_cn = ksize*<span>cn;
+
+        width = (width - 1)*<span>cn;
+        for( k = 0; k &lt; cn; k++, S++, D++<span> )
+        {
+            ST s = 0<span>;
+            for( i = 0; i &lt; ksz_cn; i +=<span> cn )
+                s +=<span> S[i];
+            D[0] =<span> s;
+            for( i = 0; i &lt; width; i +=<span> cn )
+            {
+                s += S[i + ksz_cn] -<span> S[i];
+                D[i+cn] =<span> s;
+            }
+        }
+    }
+};</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></pre>
+<div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/copycode.gif" alt="复制代码"></a></span></div></div>
+<p>　　这个代码考虑了多个通道以及多种数据类型的情况，为了分析方便我们重写下单通道时的核心代码。</p>
+<div class="cnblogs_code"><div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/copycode.gif" alt="复制代码"></a></span></div>
+<pre>for(Z = 0, Value = 0; Z &lt; Size; Z++<span>)    
+    Value +=<span> RowData[Z];
+LinePD[0] =<span> Value;
+
+for(X = 1; X &lt; Width; X ++<span>)
+{
+    Value += RowData[X + Size - 1] - RowData[X - 1<span>];    
+    LinePD[X] = Value;               
+}</span></span></span></span></span></pre>
+<div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/copycode.gif" alt="复制代码"></a></span></div></div>
+<p>　　上述代码中RowData是指对某一行像素进行扩展后的像素值，其宽度为Width + Radius + Radius, Radius是值滤波的半径， 而代码中Size = 2 * Radius + 1，LinePD即所谓的中间结果，考虑数据类型能表达的范围，必须使用 int类型。</p>
+<p>&nbsp; &nbsp; &nbsp; 对于每行第一个点很简单，直接用for计算出行方向的指定半径内的累加值。而之后所有点，用前一个累计值加上新加入的点，然后去除掉移出的哪一个点，得到新的累加值。这个方法在很多文献中都有提及，并没有什么新鲜之处，这里不多说。</p>
+<p>&nbsp; &nbsp; &nbsp;按照正常的思维，在列方向的处理应该和行方向完全相同，只是处理的方向的不同、处理的数据源的不同以及最后需要对计算结果多一个归一化的过程而已。事实也是如此，有很多算法都是这样做的，但是由于CPU构架的一些原因（主要是cache miss的增加），同样的算法沿列方向处理总是会比沿行方向慢一个档次，解决方式有很多，例如先对中间结果进行转置，然后再按照行方向的规则进行处理，处理完后在将数据转置回去。转置过程是有非常高效的处理方式的，借助于SSE以及Cache优化，能实现比原始两重for循环快4倍以上的效果。还有一种方式就正如opencv中列处理过程所示，这正是下面将要重点描述的。</p>
+<p>&nbsp; &nbsp; &nbsp; 在opencv的代码中，并没有直接沿列方向处理，而是继续沿着行的方向一行一行处理，我先贴出我自己翻译的有关纯C的代码进行解说：</p>
+<div class="cnblogs_code"><div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/copycode.gif" alt="复制代码"></a></span></div>
+<pre>    for (Y = 0; Y &lt; Size - 1; Y++)            //    注意没有最后一项哦                      
+<span>    {
+        int *LinePS = (int *)(Sum-&gt;Data + ColPos[Y] * Sum-&gt;<span>WidthStep);
+        for(X = 0; X &lt; Width; X++)    ColSum[X] +=<span> LinePS[X];
+    }
+
+    for (Y = 0; Y &lt; Height; Y++<span>)
+    {
+        unsigned char* LinePD    = Dest-&gt;Data + Y * Dest-&gt;<span>WidthStep;    
+        int *AddPos              = (int*)(Sum-&gt;Data + ColPos[Y + Size - 1] * Sum-&gt;<span>WidthStep);
+        int *SubPos              = (int*)(Sum-&gt;Data + ColPos[Y] * Sum-&gt;<span>WidthStep);
+
+        for(X = 0; X &lt; Width; X++<span>)
+        {
+            Value = ColSum[X] +<span> AddPos[X];
+            LinePD[X] = Value * Scale;                    
+            ColSum[X] = Value -<span> SubPos[X];
+        }
+    }</span></span></span></span></span></span></span></span></span></span></pre>
+<div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/copycode.gif" alt="复制代码"></a></span></div></div>
+<p>&nbsp; &nbsp; &nbsp; 上述代码中定义了一个ColSum用于保存每行某个位置处在列方向上指定半径内各中间元素的累加值，对于第一行，做特殊处理，其他行的每个元素的处理方式和BaseRowFilter里的处理方式很像，只是在书写上有所区别，特别注意的是对第一行的累加时，最后一个元素并没有计算在内，这个处理技巧在下面的X循环里有体现，请大家仔细体味下。</p>
+<p>&nbsp; &nbsp; &nbsp;上述代码这样做的好处是，能有效的减少CPU的cache miss，但是总的计算量是没有改变的，因此能有效的提高速度。</p>
+<p>&nbsp; &nbsp; &nbsp;针对PC，在opencv内部，其在列方向上采用了SSE进行进一步的优化，我们贴出其处理uchar类型的代码：</p>
+<div class="cnblogs_code"><img id="code_img_closed_5f53127d-fc51-45ad-8e75-72510e6743c2" class="code_img_closed" src="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/ContractedBlock.gif" alt=""><span class="cnblogs_code_collapse">View Code</span></div>
+<p>　　代码比较多，我稍微精简下（注意，精简后的是不可运行的，只是更清晰的表达了思路）。</p>
+<div class="cnblogs_code"><div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/copycode.gif" alt="复制代码"></a></span></div>
+<pre>virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int<span> width)
+{
+    int<span> i;
+    int*<span> SUM;
+    bool haveScale = scale != 1<span>;
+    double _scale =<span> scale;
+    if( width != (int<span>)sum.size() )
+    {
+        sum.resize(width);
+        sumCount = 0<span>;
+    }
+
+    SUM = &amp;sum[0<span>];
+    if( sumCount == 0<span> )
+    {
+        memset((void*)SUM, 0, width*sizeof(int<span>));
+        for( ; sumCount &lt; ksize - 1; sumCount++, src++<span> )
+        {
+            const int* Sp = (const int*)src[0<span>];
+            i = 0<span>;
+           
+            for( ; i &lt;= width-4; i+=4<span> )
+            {
+                __m128i _sum = _mm_loadu_si128((const __m128i*)(SUM+<span>i));
+                __m128i _sp = _mm_loadu_si128((const __m128i*)(Sp+<span>i));
+                _mm_storeu_si128((__m128i*)(SUM+<span>i),_mm_add_epi32(_sum, _sp));
+            }
+            for( ; i &lt; width; i++<span> )
+                SUM[i] +=<span> Sp[i];
+        }
+    }
+    else<span>
+    {
+        src += ksize-1<span>;
+    }
+
+    for( ; count--; src++<span> )
+    {
+        const int* Sp = (const int*)src[0<span>];
+        const int* Sm = (const int*)src[1-<span>ksize];
+        uchar* D = (uchar*<span>)dst;
+
+        i = 0<span>;
+        const __m128 scale4 = _mm_set1_ps((float<span>)_scale);
+        for( ; i &lt;= width-8; i+=8<span> )
+        {
+            __m128i _sm  = _mm_loadu_si128((const __m128i*)(Sm+<span>i));
+            __m128i _sm1  = _mm_loadu_si128((const __m128i*)(Sm+i+4<span>));
+
+            __m128i _s0  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+<span>i)),
+                                         _mm_loadu_si128((const __m128i*)(Sp+<span>i)));
+            __m128i _s01  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i+4<span>)),
+                                          _mm_loadu_si128((const __m128i*)(Sp+i+4<span>)));
+
+            __m128i _s0T =<span> _mm_cvtps_epi32(_mm_mul_ps(scale4, _mm_cvtepi32_ps(_s0)));
+            __m128i _s0T1 =<span> _mm_cvtps_epi32(_mm_mul_ps(scale4, _mm_cvtepi32_ps(_s01)));
+
+            _s0T =<span> _mm_packs_epi32(_s0T, _s0T1);
+
+            _mm_storel_epi64((__m128i*)(D+<span>i), _mm_packus_epi16(_s0T, _s0T));
+
+            _mm_storeu_si128((__m128i*)(SUM+<span>i), _mm_sub_epi32(_s0,_sm));
+            _mm_storeu_si128((__m128i*)(SUM+i+4<span>),_mm_sub_epi32(_s01,_sm1));
+        }
+        for( ; i &lt; width; i++<span> )
+        {
+            int s0 = SUM[i] +<span> Sp[i];
+            D[i] = saturate_cast&lt;uchar&gt;(s0*<span>_scale);
+            SUM[i] = s0 -<span> Sm[i];
+        }
+
+        dst +=<span> dststep;
+    }
+}</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></pre>
+<div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/copycode.gif" alt="复制代码"></a></span></div></div>
+<p>&nbsp; &nbsp; &nbsp; 在行方向上，ColSum每个元素的更新相互之间是没有任何关系的，因此，借助于SSE可以实现一次性的四个元素的更新，并且上述代码还将第一行的特殊计算也用SSE实现了，虽然这部分计算量是非常小的。</p>
+<p>&nbsp; &nbsp; &nbsp;在具体的SSE细节上，对于uchar类型，虽然中间结果是用int类型表达的，但是由于SSE没有整形的除法指令（是否有？），因此上面借用了浮点数的乘法SSE指令实现，当然就多了_mm_cvtepi32_ps 以及&nbsp;_mm_cvtps_epi32这样的类型转换的函数。如果有整形除法，那就能更好了。</p>
+<p>&nbsp; &nbsp; &nbsp;SSE的实现，无非也就是用_mm_loadu_si128加载数据，用_mm_add_epi32，&nbsp;_mm_mul_ps之类的函数进行基本的运算，用_mm_storeu_si128来保存数据，并没有什么特别复杂的部分，注意到考虑到数据的普遍性，不一定都是16字节对齐的，因此在加载和保存是需要使用u方面的函数，其实现在的_mm_loadu_si128和_mm_load_si128在处理速度上已经没有特别明显的区别了。</p>
+<p>&nbsp; &nbsp; &nbsp; 注意到在每个SSE代码后面，总还有部分C代码，这是因为我们实际数据宽度并不一定是4的整数倍，未被SSE处理的部分必须使用C实现，这其实对读者来说是非常好的事情，因为我们能从这部分C代码中搞明白上述的SSE代码是干什么的。</p>
+<p>　　以上就是opencv的Box Filter实现的关键代码，如果读者去看具体细节，opencv还有针对手机上的Neon优化，其实这个和SSE的意思基本是一样的。</p>
+<p>　　那是否还有改进的空间呢，从我的认知中，在对垂直方向的处理上，应该没有了，但是水平方向呢， SSE有没有用武之地，经过我的思考我认为还是有的。</p>
+<p>　　在行方向的计算中，这个for循环是主要的计算。</p>
+<div class="cnblogs_code">
+<pre>for(X = 1; X &lt; Width; X ++<span>)
+{
+    Value += RowData[X + Size - 1] - RowData[X - 1<span>];    
+    LinePD[X] =<span> Value;               
+}</span></span></span></pre>
+</div>
+<p>&nbsp; &nbsp; &nbsp; &nbsp;本人认为虽然这里的操作是前后依赖的，全局无法并行化，但是观察这一行代码：</p>
+<div class="cnblogs_code">
+<pre>Value += RowData[X + Size - 1] - RowData[X - 1];    </pre>
+</div>
+<p>&nbsp; &nbsp; &nbsp; 其中RowData[X + Size - 1] - RowData[X - 1]; 并不是前后依赖的，是可以并行的，因此如果提前快速的计算出所有的差值，那么提速的空间还比较大，即需要提前计算出下面的函数：</p>
+<div class="cnblogs_code">
+<pre> for(X = 0; X &lt; (Width - 1); X++<span>)
+     Diff[X] = AddPos[X] - SubPos[X];</span></pre>
+</div>
+<p>　　这里用SSE实现则非常简单了：</p>
+<div class="cnblogs_code"><div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/copycode.gif" alt="复制代码"></a></span></div>
+<pre>        unsigned char *AddPos = RowData + Size *<span> Channel;
+        unsigned char *SubPos =<span> RowData;
+        X = 0;                    //    注意这个赋值在下面的循环外部，这可以避免当Width&lt;8时第二个for循环循环变量未初始化            
+        __m128i Zero =<span> _mm_setzero_si128();
+        for (; X &lt;= (Width - 1) * Channel - 8; X += 8<span>)
+        {
+            __m128i Add = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i const *)(AddPos +<span> X)), Zero);        
+            __m128i Sub = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i const *)(SubPos +<span> X)), Zero);        
+            _mm_store_si128((__m128i *)(Diff + X + 0), _mm_sub_epi32(_mm_unpacklo_epi16(Add, Zero), _mm_unpacklo_epi16(Sub, Zero)));        //    由于采用了_aligned_malloc函数分配内存，可是使用_mm_store_si128
+            _mm_store_si128((__m128i *)(Diff + X + 4<span>), _mm_sub_epi32(_mm_unpackhi_epi16(Add, Zero), _mm_unpackhi_epi16(Sub, Zero)));
+        }
+        for(; X &lt; (Width - 1) * Channel; X++<span>)
+            Diff[X] = AddPos[X] - SubPos[X];</span></span></span></span></span></span></span></span></pre>
+<div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/copycode.gif" alt="复制代码"></a></span></div></div>
+<p>　　和列方向的SSE处理代码不同的是，这里加载的是uchar数据，因此加载的函数就有所不同，处理的方式也有区别，上面几个SSE函数各位查查MSDN就能理解其意思，还是很有味道的。</p>
+<p>　　经过这样的处理，经过测试发现，速度能够比opencv的版本在提高30%，也是额外的惊喜。</p>
+<p>&nbsp; &nbsp; &nbsp; 再有的优化可能提速有限，比如把剩下的一些for循环内部分成四路等等。</p>
+<p>&nbsp; &nbsp; &nbsp;在我的I5台式机中，使用上述算法对1024*1024的三通道彩色图像进行半径为5的测试，进行100次的计算纯算法部分的耗时为800ms，如果是纯C版本大概为1800ms；当半径为200时，SSE版本约为950ms， C版本约1900ms；当半径为400时，SSE版本约为1000ms， C版本约2100ms；可见，半径增大，耗时稍有增加，这主要是由于算法中有部分初始化的计算和半径有关，但是这些都是不重要的。</p>
+<p>&nbsp; &nbsp; &nbsp; 在不使用多线程（虽然本算法非常适合多线程计算），不使用GPU，只使用单线程\CPU进行计算的情况下，<strong>个人觉得目前我这个代码是很难有质的超越的，</strong>从某个方面讲，代码中的用于计算的时间占用的时间比从内存等待数据的时间可能还要短，而似乎也没有更好的算法能进一步减少内存数据的访问量。</p>
+<p>&nbsp; &nbsp; &nbsp; 本人在这里邀请各位高手对目前我优化的这个代码进行进一步的优化，希望高人不要谦虚。</p>
+<p>&nbsp; &nbsp; &nbsp; 源代码下载地址（VS2010编写）：<a href="http://files.cnblogs.com/files/Imageshop/BoxBlur.rar" target="_blank">Box Filter</a>&nbsp;</p>
+<p>　　运行界面：</p>
+<p><img src="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/349293-20151217090530021-1700166781.png" alt=""></p>
+<p>　　</p>
+<p>　　本文的代码是针对常用的图像数据进行的优化处理，在很多场合下，需要对int或者float类型进行处理，比如GuideFilter，如果读者理解了本文解读的代码的原理，更改代码以便适应他们则是一件非常简单的事情，如果您不会，那么也请你不要给我留言，或者我可以有偿提供，因为从本质上讲我喜欢提供渔，而不是鱼，渔具已经送给你了，你却找我要鱼，那只能..............。&nbsp;&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;****************************作者： laviewpbt &nbsp; 时间： 2015.12.17 &nbsp; &nbsp;联系QQ: &nbsp;33184777 转载请保留本行信息**********************</p>
+<p>&nbsp; &nbsp; &nbsp;</p></div><div id="MySignature"></div>
+<div class="clear"></div>
+<div id="blog_post_info_block">
+<div id="BlogPostCategory"></div>
+<div id="EntryTag">标签: <a href="http://www.cnblogs.com/Imageshop/tag/Box%20Filter/">Box Filter</a>, <a href="http://www.cnblogs.com/Imageshop/tag/boxblur/">boxblur</a>, <a href="http://www.cnblogs.com/Imageshop/tag/fast/">fast</a></div>
+<div id="blog_post_info"><div id="green_channel">
+<a href="javascript:void(0);" id="green_channel_digg" onclick="DiggIt(5053013,cb_blogId,1);green_channel_success(this,&#39;谢谢推荐！&#39;);">好文要顶</a>
+<a id="green_channel_follow" onclick="c_follow();" href="javascript:void(0);">关注我</a>
+<a id="green_channel_favorite" onclick="AddToWz(cb_entryId);return false;" href="javascript:void(0);">收藏该文</a><a id="green_channel_contact" href="http://msg.cnblogs.com/send/Imageshop" target="_blank">联系我</a>
+<a id="green_channel_weibo" href="javascript:void(0);" title="分享至新浪微博" onclick="ShareToTsina()"><img src="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/icon_weibo_24.png" alt=""></a>
+<a id="green_channel_wechat" href="javascript:void(0);" title="分享至微信" onclick="shareOnWechat()"><img src="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/wechat.png" alt=""></a>
+</div>
+<div id="author_profile">
+<div id="author_profile_info" class="author_profile_info">
+<a href="http://home.cnblogs.com/u/Imageshop/" target="_blank"><img src="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/20131110123124.png" class="author_avatar" alt=""></a>
+<div id="author_profile_detail" class="author_profile_info">
+<a href="http://home.cnblogs.com/u/Imageshop/">Imageshop</a><br>
+<a href="http://home.cnblogs.com/u/Imageshop/followees">关注 - 1</a><br>
+<a href="http://home.cnblogs.com/u/Imageshop/followers">粉丝 - 762</a>
+</div>
+</div>
+<div class="clear"></div>
+<div id="author_profile_honor"></div>
+<div id="author_profile_follow">
+    <a href="javascript:void(0);" onclick="c_follow();return false;">+加关注</a>
+</div>
+</div>
+<div id="div_digg">										
+    <div class="diggit" onclick="votePost(5053013,&#39;Digg&#39;)">
+        <span class="diggnum" id="digg_count">4</span>
+    </div>
+	<div class="buryit" onclick="votePost(5053013,&#39;Bury&#39;)"> 
+		<span class="burynum" id="bury_count">0</span>
+	</div>
+	<div class="clear"></div>	
+	<div class="diggword" id="digg_tips">
+    (请您对文章做出评价)
+    </div>	
+</div>
+</div>
+<div class="clear"></div>
+<div id="post_next_prev"><a href="http://www.cnblogs.com/Imageshop/p/4965192.html" class="p_n_p_prefix">« </a> 上一篇：<a href="http://www.cnblogs.com/Imageshop/p/4965192.html" title="发布于2015-11-14 22:11">优化IPOL网站中基于DCT（离散余弦变换）的图像去噪算法（附源代码）。</a><br></div>
+</div>
+
+
+	<div class="postDesc">posted on <span id="post-date">2015-12-17 09:18</span> <a href="http://www.cnblogs.com/Imageshop/">Imageshop</a> 阅读(<span id="post_view_count">1122</span>) 评论(<span id="post_comment_count">3</span>)  <a href="http://i.cnblogs.com/EditPosts.aspx?postid=5053013" rel="nofollow">编辑</a> <a href="http://www.cnblogs.com/Imageshop/p/5053013.html#" onclick="AddToWz(5053013);return false;">收藏</a></div>
+</div>
+<script type="text/javascript">var allowComments=true,isLogined=false,cb_blogId=101420,cb_entryId=5053013,cb_blogApp=currentBlogApp,cb_blogUserGuid='4cfdef94-d20a-e111-b7b9-842b2b196315',cb_entryCreatedDate='2015/12/17 9:18:00';loadViewCount(cb_entryId);</script>
+
+</div><a name="!comments"></a><div id="blog-comments-placeholder"><div id="comments_pager_top"></div>
+<!--done-->
+<br>
+<b>FeedBack:</b>
+<div class="feedbackNoItems"></div>
+	
+
+		<div class="feedbackItem">
+			<div class="feedbackListTitle"><a href="http://www.cnblogs.com/Imageshop/p/5053013.html#3328690" class="layer">#1楼</a><a name="3328690" id="comment_anchor_3328690"></a></div>
+			<div class="feedbackListSubtitle">
+				 <span class="comment_date">2015-12-17 09:53</span> | <a id="a_comment_author_3328690" href="http://www.cnblogs.com/coolyylu/" target="_blank">Ender.Lu</a> <a href="http://msg.cnblogs.com/send/Ender.Lu" title="发送站内短消息" class="sendMsg2This">&nbsp;</a><br>
+				<div align="left"><div id="comment_body_3328690" class="blog_comment_body">好图</div><div class="comment_vote"><a href="javascript:void(0);" class="comment_digg" onclick="return voteComment(3328690,&#39;Digg&#39;,this)">支持(0)</a><a href="javascript:void(0);" class="comment_bury" onclick="return voteComment(3328690,&#39;Bury&#39;,this)">反对(0)</a></div>&nbsp;&nbsp;<span class="comment_actions"></span></div>
+			</div>
+			
+			
+		</div>
+	
+		<div class="feedbackItem">
+			<div class="feedbackListTitle"><a href="http://www.cnblogs.com/Imageshop/p/5053013.html#3337471" class="layer">#2楼</a><a name="3337471" id="comment_anchor_3337471"></a></div>
+			<div class="feedbackListSubtitle">
+				 <span class="comment_date">2015-12-29 21:05</span> | <a id="a_comment_author_3337471" href="http://www.cnblogs.com/jsxyhelu/" target="_blank">jsxyhelu</a> <a href="http://msg.cnblogs.com/send/jsxyhelu" title="发送站内短消息" class="sendMsg2This">&nbsp;</a><br>
+				<div align="left"><div id="comment_body_3337471" class="blog_comment_body">boxfilter的运用场合的确很多，楼主能够对算法精细地分析非常厉害。研究以后会谈一谈自己的想法。</div><div class="comment_vote"><a href="javascript:void(0);" class="comment_digg" onclick="return voteComment(3337471,&#39;Digg&#39;,this)">支持(0)</a><a href="javascript:void(0);" class="comment_bury" onclick="return voteComment(3337471,&#39;Bury&#39;,this)">反对(0)</a></div>&nbsp;&nbsp;<span class="comment_actions"></span></div>
+			</div>
+			
+			
+		</div>
+	
+		<div class="feedbackItem">
+			<div class="feedbackListTitle"><a href="http://www.cnblogs.com/Imageshop/p/5053013.html#3339174" class="layer">#3楼</a><a name="3339174" id="comment_anchor_3339174"></a><span id="comment-maxId" style="display:none;">3339174</span><span id="comment-maxDate" style="display:none;">2015/12/31 22:48:40</span></div>
+			<div class="feedbackListSubtitle">
+				 <span class="comment_date">2015-12-31 22:48</span> | <a id="a_comment_author_3339174" href="http://www.cnblogs.com/jsxyhelu/" target="_blank">jsxyhelu</a> <a href="http://msg.cnblogs.com/send/jsxyhelu" title="发送站内短消息" class="sendMsg2This">&nbsp;</a><br>
+				<div align="left"><div id="comment_body_3339174" class="blog_comment_body">之前在做ace的时候，切身地体验过boxfilter和gaussfilter之前的速度差别。感觉现在opencv的实现已经不错了，楼主能够更进一步，有没有考虑直接提交到opencv里面去？这样岂不是给全世界所有程序员一个“渔具”？哈哈</div><div class="comment_vote"><a href="javascript:void(0);" class="comment_digg" onclick="return voteComment(3339174,&#39;Digg&#39;,this)">支持(0)</a><a href="javascript:void(0);" class="comment_bury" onclick="return voteComment(3339174,&#39;Bury&#39;,this)">反对(0)</a></div>&nbsp;&nbsp;<span class="comment_actions"></span></div>
+			</div>
+			
+			
+		</div>
+	
+
+
+
+<div id="comments_pager_bottom"></div></div><script type="text/javascript">var commentManager = new blogCommentManager();commentManager.renderComments(0);</script>
+<div id="comment_form" class="commentform">
+<a name="commentform"></a>
+<div id="divCommentShow"></div>
+<div id="comment_nav"><span id="span_refresh_tips"></span><a href="javascript:void(0);" onclick="return RefreshCommentList();" id="lnk_RefreshComments" runat="server" clientidmode="Static">刷新评论</a><a href="http://www.cnblogs.com/Imageshop/p/5053013.html#" onclick="return RefreshPage();">刷新页面</a><a href="http://www.cnblogs.com/Imageshop/p/5053013.html#top">返回顶部</a></div>
+<div id="comment_form_container"><div class="login_tips">注册用户登录后才能发表评论，请 <a rel="nofollow" href="javascript:void(0);" class="underline" onclick="return login(&#39;commentform&#39;);">登录</a> 或 <a rel="nofollow" href="javascript:void(0);" class="underline" onclick="return register();">注册</a>，<a href="http://www.cnblogs.com/">访问</a>网站首页。</div></div>
+<div class="ad_text_commentbox" id="ad_text_under_commentbox"></div>
+<div id="ad_t2"><a href="http://www.ucancode.com/index.htm" target="_blank">【推荐】50万行VC++源码: 大型组态工控、电力仿真CAD与GIS源码库</a><br><a href="http://www.rongcloud.cn/" target="_blank">【推荐】融云即时通讯云－豆果美食、Faceu等亿级APP都在用</a><br></div>
+<div id="opt_under_post"></div>
+<div id="ad_c1" class="c_ad_block"><a href="http://www.gcpowertools.com.cn/products/componentone.htm?utm_source=cnblogs&utm_medium=blogpage&utm_term=bottom&utm_content=C1&utm_campaign=community" target="_blank"><img width="300" height="250" src="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/24442-20160331135220551-2117417331.gif" alt=""></a></div>
+<div id="under_post_news"><div class="itnews c_ad_block"><b>最新IT新闻</b>:<br> ·  <a href="http://news.cnblogs.com/n/543562/" target="_blank">微软抗3D touch的新专利：多级Shy用户界面</a><br> ·  <a href="http://news.cnblogs.com/n/543561/" target="_blank">10年学到的编程经验总结</a><br> ·  <a href="http://news.cnblogs.com/n/543559/" target="_blank">微软为地震后的日本与厄瓜多尔临时提供Skype免费服务</a><br> ·  <a href="http://news.cnblogs.com/n/543558/" target="_blank">首款Ubuntu平板BQ Aquaris M10正式开售</a><br> ·  <a href="http://news.cnblogs.com/n/543557/" target="_blank">解析实践十号科学卫星如何从太空返回地球</a><br>» <a href="http://news.cnblogs.com/" title="IT新闻" target="_blank">更多新闻...</a></div></div>
+<div id="ad_c2" class="c_ad_block"><a href="https://www.jpush.cn/?from=cnblogs01" target="_blank"><img width="468" height="60" src="./解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。 - Imageshop - 博客园_files/24442-20160307140747632-1210035054.jpg" alt=""></a></div>
+<div id="under_post_kb"><div class="itnews c_ad_block" id="kb_block"><b>最新知识库文章</b>:<br><div id="kb_recent"> ·  <a href="http://kb.cnblogs.com/page/543110/" target="_blank">架构漫谈（九）：理清技术、业务和架构的关系</a><br> ·  <a href="http://kb.cnblogs.com/page/542725/" target="_blank">架构漫谈（八）：从架构的角度看如何写好代码</a><br> ·  <a href="http://kb.cnblogs.com/page/542257/" target="_blank">架构漫谈（七）：不要空设架构师这个职位，给他实权</a><br> ·  <a href="http://kb.cnblogs.com/page/541740/" target="_blank">架构漫谈（六）：软件架构到底是要解决什么问题？</a><br> ·  <a href="http://kb.cnblogs.com/page/541188/" target="_blank">架构漫谈（五）：什么是软件</a><br></div>» <a href="http://kb.cnblogs.com/" target="_blank">更多知识库文章...</a></div></div>
+<div id="HistoryToday" class="c_ad_block"></div>
+<script type="text/javascript">
+$(function () {
+    setTimeout(function () { incrementViewCount(cb_entryId); }, 50);
+    deliverAdT2();
+    deliverAdC1();
+    deliverAdC2();    
+    loadNewsAndKb();
+    loadBlogSignature();
+    LoadPostInfoBlock(cb_blogId, cb_entryId, cb_blogApp, cb_blogUserGuid);
+    GetPrevNextPost(cb_entryId, cb_blogId, cb_entryCreatedDate);
+    loadOptUnderPost();
+    GetHistoryToday(cb_blogId, cb_blogApp, cb_entryCreatedDate);    
+});
+</script>
+</div>
+
+
+</div>
+<div id="leftcontent">
+	
+		<div id="leftcontentcontainer">
+			
+<!--done-->
+<div class="newsItem">
+	<div id="blog-news"><p>QQ:33184777</p>
+<p>群:30417248/下载博客中文档。</p>
+<p>Email: laviewpbt@sina.com </p>
+<p>格言：人一定要靠自己。 </p>
+<p>开发语言：VB6、C、C++、C# </p>
+<p>开发特长：图像算法实现和优化。</p>
+<p>短期目标：自由状态。</p>
+<p>代表软件：<a href="http://files.cnblogs.com/Imageshop/ImageShop.rar">Imageshop&nbsp;</a></p><div id="profile_block">昵称：<a href="http://home.cnblogs.com/u/Imageshop/">Imageshop</a><br>园龄：<a href="http://home.cnblogs.com/u/Imageshop/" title="入园时间：2011-11-09">4年5个月</a><br>粉丝：<a href="http://home.cnblogs.com/u/Imageshop/followers/">762</a><br>关注：<a href="http://home.cnblogs.com/u/Imageshop/followees/">1</a><div id="p_b_follow"><a href="javascript:void(0);" onclick="cnblogs.UserManager.FollowBlogger(&#39;4cfdef94-d20a-e111-b7b9-842b2b196315&#39;)">+加关注</a></div></div></div><script type="text/javascript">loadBlogNews();</script>
+</div>
+<br>			
+			<div id="blog-calendar" style="display:none"></div><script type="text/javascript">loadBlogDefaultCalendar();</script>
+			<div id="blog-sidecolumn"><div id="sidebar_search" class="sidebar-block"></div><div id="sidebar_categories">
+<!--done-->
+
+		<h1 class="catListTitle">随笔分类<span style="font-size:11px;font-weight:normal">(113)</span></h1>
+		
+				<ul class="catList">
+			
+				<li class="catListItem"> <a id="CatList_LinkList_0_Link_0" class="listitem" href="http://www.cnblogs.com/Imageshop/category/535367.html">[01] 图像增强算法(26)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_0_Link_1" class="listitem" href="http://www.cnblogs.com/Imageshop/category/535368.html">[02] 图像特效滤镜(14)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_0_Link_2" class="listitem" href="http://www.cnblogs.com/Imageshop/category/334067.html">[03] 图像算法优化(13)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_0_Link_3" class="listitem" href="http://www.cnblogs.com/Imageshop/category/334068.html">[04] 图像识别相关(14)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_0_Link_4" class="listitem" href="http://www.cnblogs.com/Imageshop/category/535365.html">[05] 图像去雾技术(10)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_0_Link_5" class="listitem" href="http://www.cnblogs.com/Imageshop/category/535377.html">[06] 图像直方图处理(5)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_0_Link_6" class="listitem" href="http://www.cnblogs.com/Imageshop/category/535378.html">[07] 双边滤波磨皮(6)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_0_Link_7" class="listitem" href="http://www.cnblogs.com/Imageshop/category/535362.html">[08] 图像二值相关(5)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_0_Link_8" class="listitem" href="http://www.cnblogs.com/Imageshop/category/334061.html">[09] 图像颜色空间(6)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_0_Link_9" class="listitem" href="http://www.cnblogs.com/Imageshop/category/334062.html">[10] 图像编码解码(7)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_0_Link_10" class="listitem" href="http://www.cnblogs.com/Imageshop/category/535382.html">[11] 图像技术杂谈(3)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_0_Link_11" class="listitem" href="http://www.cnblogs.com/Imageshop/category/334074.html">[12] 图像算法资源(3)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_0_Link_12" class="listitem" href="http://www.cnblogs.com/Imageshop/category/553703.html">[13] 图像抠图技术(1)</a></li>
+			
+				</ul>
+			
+	
+		<h1 class="catListTitle">随笔档案<span style="font-size:11px;font-weight:normal">(79)</span></h1>
+		
+				<ul class="catList">
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_0" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2015/12.html">2015年12月 (1)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_1" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2015/11.html">2015年11月 (1)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_2" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2015/10.html">2015年10月 (1)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_3" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2015/08.html">2015年8月 (2)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_4" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2015/07.html">2015年7月 (1)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_5" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2015/04.html">2015年4月 (1)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_6" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2015/02.html">2015年2月 (1)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_7" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2014/11.html">2014年11月 (1)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_8" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2014/08.html">2014年8月 (3)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_9" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2014/07.html">2014年7月 (4)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_10" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2014/06.html">2014年6月 (1)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_11" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2014/04.html">2014年4月 (2)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_12" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2014/03.html">2014年3月 (3)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_13" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2014/02.html">2014年2月 (1)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_14" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2014/01.html">2014年1月 (1)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_15" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2013/12.html">2013年12月 (4)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_16" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2013/11.html">2013年11月 (5)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_17" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2013/10.html">2013年10月 (3)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_18" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2013/09.html">2013年9月 (6)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_19" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2013/08.html">2013年8月 (4)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_20" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2013/07.html">2013年7月 (7)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_21" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2013/06.html">2013年6月 (4)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_22" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2013/05.html">2013年5月 (1)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_23" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2013/04.html">2013年4月 (6)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_24" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2013/02.html">2013年2月 (3)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_25" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2013/01.html">2013年1月 (2)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_26" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2012/12.html">2012年12月 (1)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_27" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2012/03.html">2012年3月 (1)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_28" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2012/02.html">2012年2月 (1)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_29" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2011/12.html">2011年12月 (2)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_1_Link_30" class="listitem" href="http://www.cnblogs.com/Imageshop/archive/2011/11.html">2011年11月 (5)</a></li>
+			
+				</ul>
+			
+	
+		<h1 class="catListTitle">文章分类<span style="font-size:11px;font-weight:normal">(12)</span></h1>
+		
+				<ul class="catList">
+			
+				<li class="catListItem"> <a id="CatList_LinkList_2_Link_0" class="listitem" href="http://www.cnblogs.com/Imageshop/category/617076.html">调整(1)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_2_Link_1" class="listitem" href="http://www.cnblogs.com/Imageshop/category/616975.html">图像模糊(4)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_2_Link_2" class="listitem" href="http://www.cnblogs.com/Imageshop/category/617172.html">图像去噪(4)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_2_Link_3" class="listitem" href="http://www.cnblogs.com/Imageshop/category/616860.html">增强函数(3)</a></li>
+			
+				</ul>
+			
+	
+		<h1 class="catListTitle">文章档案<span style="font-size:11px;font-weight:normal">(13)</span></h1>
+		
+				<ul class="catList">
+			
+				<li class="catListItem"> <a id="CatList_LinkList_3_Link_0" class="listitem" href="http://www.cnblogs.com/Imageshop/archives/2015/08.html" rel="nofollow">2015年8月 (1)</a></li>
+			
+				<li class="catListItem"> <a id="CatList_LinkList_3_Link_1" class="listitem" href="http://www.cnblogs.com/Imageshop/archives/2014/10.html" rel="nofollow">2014年10月 (12)</a></li>
+			
+				</ul>
+			
+	
+</div><div id="sidebar_scorerank" class="sidebar-block">
+<h3>积分与排名</h3>
+<ul>
+	<li>
+		积分 -
+		196472
+	</li><li>
+		排名 -
+		793
+	</li>
+</ul>
+</div><div id="sidebar_recentcomments" class="sidebar-block"><div id="recent_comments_wrap">
+<h3 class="catListTitle">最新评论</h3>
+<div class="RecentComment" id="RecentComments">
+	<div id="RecentCommentsBlock"><ul>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/Imageshop/p/3410279.html#3411250">1. Re:一种可实时处理 O(1)复杂度图像去雾算法的实现。</a></li>
+        <li class="recent_comment_body">“另外一种优化方式就是先计算行方向的平均值”，是累积值吧？</li>
+        <li class="recent_comment_author">--星夜落尘</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/Imageshop/p/3458963.html#3408181">2. Re:基于中值滤波或双边滤波方式的图像去雾效果的研讨。</a></li>
+        <li class="recent_comment_body">博主你好，你的代码有个地方我没有看懂在注释：“步骤2：然后考虑到有较好对比度的纹理区域可能没有雾， 这部分区域就不需要做去雾处理”的下面*FilterP = (unsigned char)Diff但是......</li>
+        <li class="recent_comment_author">--莲叶tiantian</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/Imageshop/archive/2013/04/20/3032062.html#3402501">3. Re:基于灰度世界、完美反射、动态阈值等图像自动白平衡算法的原理、实现及效果</a></li>
+        <li class="recent_comment_body">@superglass我也遇到这样的问题，不知道这个Db，Dr足够小的阈值设为多少？而且会出现找不到满足条件的白点的情况，博主你怎么处理的？...</li>
+        <li class="recent_comment_author">--xiaohui20110101</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/Imageshop/p/3925461.html#3398701">4. Re:优化的对比度增强算法用于有雾图像的清晰化处理（算法效果是我目前看到最为稳定的，且对天空具有天然的免疫力，极力推荐有需要的朋友研究）。</a></li>
+        <li class="recent_comment_body">您好，请问可以加一下我的QQ吗：1075777878，有些问题想请教您。</li>
+        <li class="recent_comment_author">--海子呢</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/Imageshop/p/3428809.html#3397996">5. Re:基于Fast Bilateral Filtering  算法的 High-Dynamic Range(HDR) 图像显示技术。</a></li>
+        <li class="recent_comment_body">楼主，你好，你做出来的效果挺好的，特别是对普通的偏暗的图像处理，请问楼主，你除了按照你文章开始部分给出的执行部分（伪代码描述，这个在论文的原作者网站也有描述）进行代码实现外，有没有加入一些其它的图像处......</li>
+        <li class="recent_comment_author">--superglass</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/Imageshop/p/3281703.html#3396430">6. Re:《Single Image Haze Removal Using Dark Channel Prior》一文中图像去雾算法的原理、实现、效果（速度可实时）</a></li>
+        <li class="recent_comment_body">五体投地</li>
+        <li class="recent_comment_author">--xherofly</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/Imageshop/p/3324282.html#3385999">7. Re:使用局部标准差实现图像的局部对比度增强算法。</a></li>
+        <li class="recent_comment_body">看完博主文章真是  牛逼吊炸天</li>
+        <li class="recent_comment_author">--ccdouble</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/Imageshop/p/3307308.html#3384124">8. Re:十三种基于直方图的图像全局二值化算法原理、实现、代码及效果。</a></li>
+        <li class="recent_comment_body">第十个算法，此句：for (MaxValue = 255; MaxValue &gt; MinValue &amp;&amp; HistGram[MinValue] == 0; MaxValue--) ; 其中数组索引是否......</li>
+        <li class="recent_comment_author">--hcx0713</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/Imageshop/p/3307308.html#3372611">9. Re:十三种基于直方图的图像全局二值化算法原理、实现、代码及效果。</a></li>
+        <li class="recent_comment_body">“五、迭代最佳阈值”和“十一：ISODATA(也叫做intermeans法）”实际上是一个算法，请查证！</li>
+        <li class="recent_comment_author">--quarryman</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/Imageshop/p/4679065.html#3366250">10. Re:基于局部均方差相关信息的图像去噪及其在实时磨皮美容算法中的应用。</a></li>
+        <li class="recent_comment_body">楼主 ，我最近在做相机美颜的app，能详细讲一下怎么磨皮美白吗，</li>
+        <li class="recent_comment_author">--小辉辉+</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/Imageshop/p/4679065.html#3345769">11. Re:基于局部均方差相关信息的图像去噪及其在实时磨皮美容算法中的应用。</a></li>
+        <li class="recent_comment_body">mac上面能跑不</li>
+        <li class="recent_comment_author">--刀刀daodao</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/Imageshop/p/5053013.html#3339174">12. Re:解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。</a></li>
+        <li class="recent_comment_body">之前在做ace的时候，切身地体验过boxfilter和gaussfilter之前的速度差别。感觉现在opencv的实现已经不错了，楼主能够更进一步，有没有考虑直接提交到opencv里面去？这样岂不是给......</li>
+        <li class="recent_comment_author">--jsxyhelu</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/Imageshop/p/5053013.html#3337471">13. Re:解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。</a></li>
+        <li class="recent_comment_body">boxfilter的运用场合的确很多，楼主能够对算法精细地分析非常厉害。研究以后会谈一谈自己的想法。</li>
+        <li class="recent_comment_author">--jsxyhelu</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/Imageshop/p/5053013.html#3328690">14. Re:解析opencv中Box Filter的实现并提出进一步加速的方案（源码共享）。</a></li>
+        <li class="recent_comment_body">好图</li>
+        <li class="recent_comment_author">--Ender.Lu</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/Imageshop/p/4679065.html#3324574">15. Re:基于局部均方差相关信息的图像去噪及其在实时磨皮美容算法中的应用。</a></li>
+        <li class="recent_comment_body">博主，你好。我看了你的文章，根据内容自己编码运行了，但是结果好像没有效果，使用均方差处理后磨皮程度要6以上才有磨皮效果。</li>
+        <li class="recent_comment_author">--zsz0817</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/Imageshop/p/3281703.html#3321079">16. Re:《Single Image Haze Removal Using Dark Channel Prior》一文中图像去雾算法的原理、实现、效果（速度可实时）</a></li>
+        <li class="recent_comment_body">楼主，速度上的问题可以采取一些弥补措施，比如gpu加速什么的，做应用什么的已经足够了吧</li>
+        <li class="recent_comment_author">--hantics</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/Imageshop/p/3281703.html#3317743">17. Re:《Single Image Haze Removal Using Dark Channel Prior》一文中图像去雾算法的原理、实现、效果（速度可实时）</a></li>
+        <li class="recent_comment_body">膜拜膜拜！</li>
+        <li class="recent_comment_author">--chwise</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/Imageshop/archive/2013/02/02/2889897.html#3315946">18. Re:颜色空间系列2: RGB和CIELAB颜色空间的转换及优化算法</a></li>
+        <li class="recent_comment_body">感谢您提供的分享，现在才发现原来简单的转换算法可以优化的这么好</li>
+        <li class="recent_comment_author">--jjdbear</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/Imageshop/p/3308183.html#3306579">19. Re:二值图像中封闭孔洞的高效填充算法（附源码）。</a></li>
+        <li class="recent_comment_body">楼主写的很好，看后很受启发，向楼主学习！！！</li>
+        <li class="recent_comment_author">--期待YMM</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/Imageshop/p/3365517.html#3304289">20. Re:基于总变差模型的纹理图像中图像主结构的提取方法。</a></li>
+        <li class="recent_comment_body">不知道博主是否已经实现了C的版本，可以的话能否借鉴一下</li>
+        <li class="recent_comment_author">--ReIandSan</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/Imageshop/archive/2012/02/09/2344405.html#3302680">21. Re:将图像转换为JPG或GIF字节流。</a></li>
+        <li class="recent_comment_body">确实不错,搜了半天GdipSaveImageToStream的用法,在这里找到了,只是对于IUnknown这个类型有点迷茫,自动提示也是没有的...</li>
+        <li class="recent_comment_author">--JustXIII</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/Imageshop/p/3515871.html#3287684">22. Re:一年去雾算法研究的总结。</a></li>
+        <li class="recent_comment_body">我想问问博主，您的这些去雾算法能不能应用在去烟上，最近导师让我做一个项目，针对的就是工业上那种烟的去除，希望您能帮忙解答下，万分感谢，感觉去雾方面的论文比去烟的多很多，去烟这块的文章看得不多，都是您推......</li>
+        <li class="recent_comment_author">--AI你一生LE</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/Imageshop/p/3475223.html#3283914">23. Re:关于《半反去雾算法》一文的四宗罪。</a></li>
+        <li class="recent_comment_body">@dr.davis请问这篇文章中的Li是怎么实现的？文中说只要色度差异小的部分，那也就是浓雾或者天空区域，其他部分怎么保留的...</li>
+        <li class="recent_comment_author">--qijing312</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/Imageshop/p/4851969.html#3278202">24. Re:图像纹理合成及纹理传输算法学习（附源码）。</a></li>
+        <li class="recent_comment_body">赞一个</li>
+        <li class="recent_comment_author">--请叫我头头哥</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/Imageshop/p/4851969.html#3278148">25. Re:图像纹理合成及纹理传输算法学习（附源码）。</a></li>
+        <li class="recent_comment_body">漂亮</li>
+        <li class="recent_comment_author">--delowly</li>
+</ul>
+</div>
+</div>
+</div></div><div id="sidebar_topviewedposts" class="sidebar-block"><div id="topview_posts_wrap">
+<h3 class="catListTitle">阅读排行榜</h3>
+<div class="RecentComment" id="TopViewPosts"> 
+	<div id="TopViewPostsBlock"><ul><li><a href="http://www.cnblogs.com/Imageshop/p/3281703.html">1. 《Single Image Haze Removal Using Dark Channel Prior》一文中图像去雾算法的原理、实现、效果（速度可实时）(22835)</a></li><li><a href="http://www.cnblogs.com/Imageshop/archive/2013/04/07/3006334.html">2. 限制对比度自适应直方图均衡化算法原理、实现及效果(17743)</a></li><li><a href="http://www.cnblogs.com/Imageshop/archive/2013/04/17/3026881.html">3. 带色彩恢复的多尺度视网膜增强算法（MSRCR）的原理、实现及应用。(10215)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3515871.html">4. 一年去雾算法研究的总结。(9413)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3576818.html">5. 一种具有细节保留功能的磨皮算法。(8377)</a></li><li><a href="http://www.cnblogs.com/Imageshop/archive/2011/11/10/2244664.html">6. 收集的网络上大型的开源图像处理软件代码（提供下载链接)(7872)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3925461.html">7. 优化的对比度增强算法用于有雾图像的清晰化处理（算法效果是我目前看到最为稳定的，且对天空具有天然的免疫力，极力推荐有需要的朋友研究）。(6275)</a></li><li><a href="http://www.cnblogs.com/Imageshop/archive/2011/11/13/2247614.html">8. 调整图像- 自动对比度、自动色阶算法(6182)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3410279.html">9. 一种可实时处理 O(1)复杂度图像去雾算法的实现。(6177)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3395968.html">10. 局部自适应自动色阶/对比度算法在图像增强上的应用。(5943)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3307308.html">11. 十三种基于直方图的图像全局二值化算法原理、实现、代码及效果。(5571)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3550185.html">12. 图像抠图算法学习  -  Shared Sampling for Real-Time Alpha Matting(5443)</a></li><li><a href="http://www.cnblogs.com/Imageshop/archive/2013/04/20/3032062.html">13. 基于灰度世界、完美反射、动态阈值等图像自动白平衡算法的原理、实现及效果(5429)</a></li><li><a href="http://www.cnblogs.com/Imageshop/archive/2013/01/31/2888097.html">14. 颜色空间系列1: RGB和CIEXYZ颜色空间的转换及相关优化(5412)</a></li><li><a href="http://www.cnblogs.com/Imageshop/archive/2013/02/02/2889897.html">15. 颜色空间系列2: RGB和CIELAB颜色空间的转换及优化算法(4967)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3293300.html">16. 双指数边缘平滑滤波器用于磨皮算法的尝试。(4776)</a></li><li><a href="http://www.cnblogs.com/Imageshop/archive/2013/05/19/3086388.html">17. Unsharp Mask(USM)锐化算法的的原理及其实现。(4756)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3907639.html">18. 避免图像去雾算法中让天空部分出现过增强的一种简易方法。(4249)</a></li><li><a href="http://www.cnblogs.com/Imageshop/archive/2013/04/22/3036127.html">19. Wellner 自适应阈值二值化算法(4245)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3458963.html">20. 基于中值滤波或双边滤波方式的图像去雾效果的研讨。(4177)</a></li></ul></div>
+</div>
+</div></div><div id="sidebar_topcommentedposts" class="sidebar-block"><div id="topfeedback_posts_wrap">
+<h3 class="catListTitle">评论排行榜</h3>
+<div class="RecentComment" id="TopCommentsPosts">
+	<div id="TopFeedbackPostsBlock"><ul><li><a href="http://www.cnblogs.com/Imageshop/p/3281703.html">1. 《Single Image Haze Removal Using Dark Channel Prior》一文中图像去雾算法的原理、实现、效果（速度可实时）(53)</a></li><li><a href="http://www.cnblogs.com/Imageshop/archive/2013/04/07/3006334.html">2. 限制对比度自适应直方图均衡化算法原理、实现及效果(36)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3576818.html">3. 一种具有细节保留功能的磨皮算法。(33)</a></li><li><a href="http://www.cnblogs.com/Imageshop/archive/2013/04/20/3032062.html">4. 基于灰度世界、完美反射、动态阈值等图像自动白平衡算法的原理、实现及效果(31)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3410279.html">5. 一种可实时处理 O(1)复杂度图像去雾算法的实现。(21)</a></li><li><a href="http://www.cnblogs.com/Imageshop/archive/2013/04/17/3026881.html">6. 带色彩恢复的多尺度视网膜增强算法（MSRCR）的原理、实现及应用。(20)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3308782.html">7. Crimm Imageshop 2.3。(18)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3925461.html">8. 优化的对比度增强算法用于有雾图像的清晰化处理（算法效果是我目前看到最为稳定的，且对天空具有天然的免疫力，极力推荐有需要的朋友研究）。(18)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3515871.html">9. 一年去雾算法研究的总结。(15)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3430742.html">10. 对比度保留之彩色图像去色算法---基础算法也可以上档次。(13)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3324282.html">11. 使用局部标准差实现图像的局部对比度增强算法。(13)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3843635.html">12. 对皮肤美白算法的一些研究。(12)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3677313.html">13. 利用联合双边滤波或引导滤波进行升采样(Upsampling)技术提高一些耗时算法的速度。(12)</a></li><li><a href="http://www.cnblogs.com/Imageshop/archive/2011/11/10/2244664.html">14. 收集的网络上大型的开源图像处理软件代码（提供下载链接)(11)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3458963.html">15. 基于中值滤波或双边滤波方式的图像去雾效果的研讨。(10)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3428809.html">16. 基于Fast Bilateral Filtering  算法的 High-Dynamic Range(HDR) 图像显示技术。(9)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3307308.html">17. 十三种基于直方图的图像全局二值化算法原理、实现、代码及效果。(9)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3265353.html">18. 肤色检测算法 -  基于不同颜色空间简单区域划分的皮肤检测算法(9)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3191853.html">19. 图像偏色检测算法，速度快，效果好，共享给大家。(8)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3293300.html">20. 双指数边缘平滑滤波器用于磨皮算法的尝试。(8)</a></li></ul></div>
+</div></div></div><div id="sidebar_topdiggedposts" class="sidebar-block"><div id="topdigg_posts_wrap">
+<h3 class="catListTitle">推荐排行榜</h3>
+<div class="RecentComment">
+	<div id="TopDiggPostsBlock"><ul><li><a href="http://www.cnblogs.com/Imageshop/p/3410279.html">1. 一种可实时处理 O(1)复杂度图像去雾算法的实现。(31)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3576818.html">2. 一种具有细节保留功能的磨皮算法。(27)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3281703.html">3. 《Single Image Haze Removal Using Dark Channel Prior》一文中图像去雾算法的原理、实现、效果（速度可实时）(20)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3925461.html">4. 优化的对比度增强算法用于有雾图像的清晰化处理（算法效果是我目前看到最为稳定的，且对天空具有天然的免疫力，极力推荐有需要的朋友研究）。(17)</a></li><li><a href="http://www.cnblogs.com/Imageshop/archive/2013/04/17/3026881.html">5. 带色彩恢复的多尺度视网膜增强算法（MSRCR）的原理、实现及应用。(17)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3430742.html">6. 对比度保留之彩色图像去色算法---基础算法也可以上档次。(15)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3550185.html">7. 图像抠图算法学习  -  Shared Sampling for Real-Time Alpha Matting(12)</a></li><li><a href="http://www.cnblogs.com/Imageshop/archive/2011/11/10/2244664.html">8. 收集的网络上大型的开源图像处理软件代码（提供下载链接)(12)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3460951.html">9. 自己编码使用去色、曲线、色阶算法实现照片怀旧特效。(11)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3191853.html">10. 图像偏色检测算法，速度快，效果好，共享给大家。(10)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3308183.html">11. 二值图像中封闭孔洞的高效填充算法（附源码）。(9)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3458963.html">12. 基于中值滤波或双边滤波方式的图像去雾效果的研讨。(9)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3453569.html">13. 24位真彩色图像转换为16位高彩色图像的实现方法及效果改进(9)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3515871.html">14. 一年去雾算法研究的总结。(9)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/4851969.html">15. 图像纹理合成及纹理传输算法学习（附源码）。(9)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/4679065.html">16. 基于局部均方差相关信息的图像去噪及其在实时磨皮美容算法中的应用。(9)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3843635.html">17. 对皮肤美白算法的一些研究。(8)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3428809.html">18. 基于Fast Bilateral Filtering  算法的 High-Dynamic Range(HDR) 图像显示技术。(8)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3406823.html">19. o(1)复杂度之双边滤波算法的原理、流程、实现及效果。(8)</a></li><li><a href="http://www.cnblogs.com/Imageshop/p/3293300.html">20. 双指数边缘平滑滤波器用于磨皮算法的尝试。(7)</a></li></ul></div>
+</div></div></div></div><script type="text/javascript">loadBlogSideColumn();</script></div>
+	
+</div>
+
+
+<!--done-->
+<div class="footer">
+	
+	Copyright ©2016 Imageshop Powered By<a href="http://www.cnblogs.com/">博客园</a> 模板提供：<a href="http://blog.hjenglish.com/">沪江博客</a>
+</div>
+
+
+</body></html>
